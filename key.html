@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sigma Waper - Admin Panel</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #141414;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.2);
+            width: 350px;
+            text-align: center;
+            border: 1px solid #222;
+        }
+        h2 {
+            color: #ff4444;
+            margin-bottom: 20px;
+            font-size: 20px;
+            letter-spacing: 1px;
+        }
+        label {
+            display: block;
+            text-align: left;
+            margin: 10px 0 5px 5px;
+            color: #888;
+            font-size: 13px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #222;
+            box-sizing: border-box;
+            background-color: #161616;
+            color: #fff;
+            font-weight: bold;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #ff4444;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .result-box {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #0d0d0d;
+            border: 1px dashed #ffc107;
+            color: #ffc107;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            word-break: break-all;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>SIGMA tanze macro</h2>
+    
+    <label for="adminPass">Admin Giriş Şifresi:</label>
+    <input type="password" id="adminPass" placeholder="key oluşturma Şifresini Girin">
+
+    <label for="keyDuration">Key Süresi:</label>
+    <select id="keyDuration">
+        <option value="1 Day">1 Günlük (Daily)</option>
+        <option value="7 Days">7 Günlük (Weekly)</option>
+        <option value="30 Days">30 Günlük (Monthly)</option>
+        <option value="Lifetime">Sınırsız (Lifetime)</option>
+    </select>
+
+    <button onclick="generateAndUploadKey()">KEY ÜRET </button>
+
+    <div id="result" class="result-box"></div>
+</div>
+
+<script>
+    // ⚠️ BURAYI KENDİ BİLGİLERİNE GÖRE DÜZENLE KANKA
+    const ADMIN_PASSWORD = "waper1"; // Panele giriş şifren ne olsun?
+    const FIREBASE_URL = "https://gripmacroauth-default-rtdb.europe-west1.firebasedatabase.app";
+
+    // Rastgele Key Üretme Fonksiyonu (Örn: TANZE-XXXX-XXXX-XXXX)
+    function generateRandomKey() {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        function makeSegment() {
+            let seg = "";
+            for (let i = 0; i < 4; i++) {
+                seg += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return seg;
+        }
+        return `TANZE-${makeSegment()}-${makeSegment()}-${makeSegment()}`;
+    }
+
+    async function generateAndUploadKey() {
+        const enteredPass = document.getElementById("adminPass").value;
+        const duration = document.getElementById("keyDuration").value;
+        const resultDiv = document.getElementById("result");
+
+        // 1. Şifre Kontrolü
+        if (enteredPass !== ADMIN_PASSWORD) {
+            alert("şifre yanlış");
+            return;
+        }
+
+        // 2. Key Oluşturma
+        const newKey = generateRandomKey();
+
+        // 3. Firebase'e Gönderilecek Veri Yapısı
+        const keyData = {
+            duration: duration,
+            hwid: "" // İlk başta boş gidiyor, hile açılınca kilitlenecek
+        };
+
+        try {
+            // Tarayıcının bağlantıyı cache'lemesini engellemek için URL sonuna timestamp ekliyoruz
+            const cleanUrl = `${FIREBASE_URL}/keys/${newKey}.json?_=${Date.now()}`;
+
+            // Firebase REST API kullanarak veriyi PUT metoduyla yazıyoruz
+            const response = await fetch(cleanUrl, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "no-cache, no-store, must-revalidate", // Tarayıcı kilitlenmesini çözen başlıklar
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                },
+                body: JSON.stringify(keyData)
+            });
+
+            if (response.ok) {
+                resultDiv.style.display = "block";
+                resultDiv.innerHTML = `<strong>BAŞARILI!</strong><br><br>Üretilen Key:<br><span style="color:#fff;">${newKey}</span><br><br>Süre: ${duration}`;
+                alert("key üretildi");
+            } else {
+                alert("Firebase'e yazılırken bir hata oluştu!");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Bağlantı hatası! Firebase URL'sini kontrol edin.");
+        }
+    }
+</script>
+
+</body>
+</html>
